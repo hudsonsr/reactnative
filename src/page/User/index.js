@@ -27,6 +27,7 @@ export default class User extends Component {
    static propTypes = {
       navigation: PropTypes.shape({
          getParam: PropTypes.func,
+         navigate: PropTypes.func,
       }).isRequired,
    };
 
@@ -34,17 +35,17 @@ export default class User extends Component {
       stars: [],
       page: 1,
       loading: false,
+      refreshing: false,
    };
 
    async componentDidMount() {
-      const { navigation } = this.props;
-
-      const user = navigation.getParam('user');
-
-      await this.loadStars(user);
+      await this.loadStars();
    }
 
-   loadStars = async user => {
+   loadStars = async () => {
+      const { navigation } = this.props;
+      const user = navigation.getParam('user');
+
       const { loading } = this.state;
       if (loading) return;
 
@@ -60,6 +61,23 @@ export default class User extends Component {
          stars: [...stars, ...response.data],
          loading: false,
          page: page + 1,
+         refreshing: false,
+      });
+   };
+
+   refreshList = async () => {
+      const { navigation } = this.props;
+      const user = navigation.getParam('user');
+      this.setState({
+         refreshing: true,
+      });
+      const response = await api.get(`/users/${user.login}/starred?page=1`);
+
+      this.setState({
+         stars: response.data,
+         loading: false,
+         page: 2,
+         refreshing: false,
       });
    };
 
@@ -74,9 +92,15 @@ export default class User extends Component {
       );
    };
 
+   handleNavigate = repo => {
+      const { navigation } = this.props;
+
+      navigation.navigate('Repo', { repo });
+   };
+
    render() {
       const { navigation } = this.props;
-      const { stars, loading } = this.state;
+      const { stars, refreshing } = this.state;
       const user = navigation.getParam('user');
 
       return (
@@ -93,14 +117,18 @@ export default class User extends Component {
                   <Starred>
                      <OwnerAvatar source={{ uri: item.owner.avatar_url }} />
                      <Info>
-                        <Title>{item.name}</Title>
+                        <Title onPress={() => this.handleNavigate(item)}>
+                           {item.name}
+                        </Title>
                         <Author>{item.owner.login}</Author>
                      </Info>
                   </Starred>
                )}
-               onEndReached={() => this.loadStars(user)}
-               onEndReachedThreshold={0.1}
+               onEndReached={this.loadStars}
+               onEndReachedThreshold={0.2}
                ListFooterComponent={this.renderFooter}
+               onRefresh={this.refreshList} // Função dispara quando o usuário arrasta a lista pra baixo
+               refreshing={refreshing} // Variável que armazena um estado true/false que representa se a lista está atualizando
             />
          </Container>
       );

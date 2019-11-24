@@ -20,7 +20,6 @@ import {
 } from './styles';
 
 export default class Main extends Component {
-   static navigationOptions = { title: 'olá' };
 
    static propTypes = {
       navigation: PropTypes.shape({
